@@ -25,7 +25,7 @@ module.exports = (app) => {
                     const token = jwt.sign(
                         { userName: adminUsernameMatched.userName},
                         process.env.PRIVATE_KEY,
-                        { expiresIn: '24h' }
+                        { expiresIn: 3.145e+10 }
                     )
                     const message = `L'utilisateur a été connecté avec succès.`
                     return res.json({ message, data: adminUsernameMatched, token })

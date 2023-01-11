@@ -1,6 +1,6 @@
 
 const auth = require('../auth/auth')
-const { newItems } = require('../utilitaires/function')
+const { newItems, objSyllabEffect } = require('../utilitaires/function')
 
 module.exports = (app, routeName) => {
     app.post(`/api/${routeName}`, auth, async (req, res) => {
@@ -15,7 +15,8 @@ module.exports = (app, routeName) => {
             
             req.body.items = req.body.items.map(element => element.toLowerCase())
 
-            const infos = await newItems('./listes/examples.txt', ...req.body.items)
+            const infos = await newItems(`./listes/${ routeName }.txt`, ...req.body.items)
+                          await objSyllabEffect(req.body.items, 'add', routeName)
             return res.status(200).json({ message: infos.message})
             
         } catch(error) {
