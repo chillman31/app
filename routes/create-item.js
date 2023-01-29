@@ -3,7 +3,7 @@ const auth = require('../auth/auth')
 const { newItems, objSyllabEffect } = require('../utilitaires/function')
 
 module.exports = (app, routeName) => {
-    app.post(`/api/${routeName}`, auth, async (req, res) => {
+    app.post(`/api/${ routeName }`, auth, async (req, res) => {
         try {
             const query = Object.keys(req.query)
             if (query.length) return res.status(404).json({ message: "Aucun paramètre ne doit être passé à l'url."})
@@ -20,6 +20,7 @@ module.exports = (app, routeName) => {
             return res.status(200).json({ message: infos.message})
             
         } catch(error) {
+            console.error(error)
             if (error instanceof SyntaxError) {
                 const message = `La chaine JSON est invalide`
                 return res.status(400).json({ message: message })

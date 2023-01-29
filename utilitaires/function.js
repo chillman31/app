@@ -60,13 +60,12 @@ const detectItemsAdded = (array1, array2) => {
 
     const message = `${ fractmessage1 } ${fractmessage2}`
 
-   return {
+    return {
         doublonsDetected: itemsInArray, 
         itemsAdded: itemsAdded, 
         message: message,
         result: [...set1]
-   }
-    
+    }  
 }
 
 const loadFile = async (file) => {
@@ -88,7 +87,27 @@ const trouverTousLesSousChaines = (t, z = (n, f) => [...Array(n)].map((_, i) => 
 
 const write = async (path, obj) => await writeFile(path, JSON.stringify(obj), 'utf8', err => console.error(err))
 
-exports.getSyllables = async (routeName, nb, limit) => {
+exports.getSyllables = async (routeName) => {
+    const listString = await readFile(`./listes/syllables/${ routeName }.txt`, 'utf-8')
+    const list = await JSON.parse(listString) 
+    const listLength = Object.keys(list).length
+    
+    return {
+        global: listLength,
+        data : list
+    }
+}
+
+const listOutVerbes = async () => {
+    const verbesString = await loadFile('../listes/verbes/verbes.txt')
+    const dictionnaire = await loadFile('../listes/dictionnaire.txt')
+    const verbs = verbesString.split('\n').map(x => x.replace('\r', ''))
+    const dicoVerbsRemoved = removeMatchedElements(dictionnaire, verbs).join('\n')
+    await writeFile('../listes/verbes/dictionnaire.txt', dicoVerbsRemoved)
+}
+
+
+exports.getSyllable = async (routeName, nb, limit) => {
     try {
         const listString = await readFile(`./listes/syllables/${ routeName }.txt`, 'utf-8')
         const list = await JSON.parse(listString)
@@ -115,15 +134,24 @@ exports.getSyllables = async (routeName, nb, limit) => {
 }
 
 exports.generateLists = async (routeName) => {
-    const list = await loadFile(`./listes/${ routeName }.txt`)
+    const list = await loadFile(`./listes/${ routeName }.txt`) 
     await write(`./listes/syllables/${ routeName }.txt`, trouverTousLesSousChaines(list))
     const listOcc = await readFile(`./listes/syllables/${ routeName }.txt`, 'utf-8')
     return JSON.parse(listOcc)
 }
 
 
+
+const removeMatchedElements = (a, b) => {
+    a = new Set(a), b = new Set(b);
+    let c = [];
+    for(const element of a) !b.has(element) && c.push(element)
+    return c   
+}
+
 const wordExplodeLetters = (word) => {
-    if (word.match(/^[a-zA-Z]+$/)) return { word : word, size:  new Set([...word]).size }
+    const w = word.replace(/[w-zW-Z]/g, '')
+    if (w.match(/^[a-zA-Z]+$/)) return { word : word, size:  new Set([...w]).size }
 }
 
 const generateObjExplodeLetters = (dictionnaire) => {
@@ -133,7 +161,7 @@ const generateObjExplodeLetters = (dictionnaire) => {
 exports.chooseNbExplodeletters = async (routeName, nbLetters, limit) => {
     const elements = await loadFile(`./listes/${ routeName }.txt`) 
     const transformDico = generateObjExplodeLetters(elements)
-    const listNotFormat = transformDico.filter(element => element.size == nbLetters)
+    const listNotFormat = transformDico.filter(element => element.size === nbLetters)
    
     const list = listNotFormat.reduce((acc, { word, size }, i) => {
         i === 0 && (acc.size = size);
@@ -157,9 +185,9 @@ exports.chooseNbExplodeletters = async (routeName, nbLetters, limit) => {
         message, 
         globalLength: listLength,
         data:listSliced
-    }
-    
+    }   
 }
+
 exports.findLengthElement = async (uri, taille) => {
     const array = await loadFile(uri) || []
     let message, elements = [], elementsSliced = [];
@@ -246,24 +274,140 @@ const cut = (list) => {
     return o
 }
 
-const createUserModel = async (userBody, res) => {
-    if (typeof userBody === "object" && Array.isArray(userBody)) {
-        res.status(400).json('Seul un objet valide peut être inséré.')
-        return 
-    } else if (typeof userBody === "object") {
-        const filepath = path.resolve(__dirname, '../auth/', 'users.json')
-        let users = await readFile(filepath, 'utf-8')   
-        let userParse = users === '' ? [] : JSON.parse(users) 
-        const matchUsername = userParse.filter(user => userBody.username === user.username)
-        if (!matchUsername.length) userParse.push(userBody)
-        const textified = JSON.stringify(userParse)
-        fs.writeFile(filepath, textified, 'utf8', (error) => {
-            if (error) throw error;
-        })
-    } else {
-        return res.status(400).json({ message : 'Problème de syntaxe.'})
+const cutter = (list) => {
+    const o = [], len = list.length - 1
+    for(let i = 0; i < len; i++) o.push(list.slice(i, i + 2), list.slice(i, i + 3))
+    return [...new Set(o)]
+}
+
+exports.getocc = async (routeName, currentpage, results) => {
+    const firstpage =  currentpage * results - results
+    const lastpage = results 
+    console.log(firstpage, lastpage)
+    const listJSON = await readFile(`./listes/occ/${ routeName }.txt`, 'utf-8')
+    const list = await JSON.parse(listJSON)
+    const res = list.slice(firstpage, lastpage)
+    let message = `Succès`
+    if (res.length === 0) {
+        message = `Aucune solution n'a été trouvée.`
     }
-   
+    return {
+        message, 
+        data: res
+    }
+}
+
+exports.generateOccList = async (routeName) => {
+    const json_dictionnaire = await readFile(`./listes/${ routeName }.txt`, 'utf-8')
+    const json_syllables = await loadFile(`./listes/syllables/${ routeName }.txt`)
+    const syllables = JSON.parse(json_syllables)
+    const dictionnaire = json_dictionnaire.split('\n')
+    const diko = dictionnaire.reduce((acc, val) => {
+        let s = cutter(val)
+        if (s.filter(x => syllables[x] < 100).length) acc.push(val)
+        return acc  
+    }, [])
+
+    const results = diko.reduce((acc, val) => {
+        const sy = cutter(val)
+        acc[val] = {   
+            word: val,
+            sy: sy.map(x => ({ syName: x, occ: 1 / syllables[x] })).sort((a, b) => a.occ - b.occ),
+            len: sy.length, globalocc: sy.reduce((acc, val) => acc + (1 / syllables[val]), 0) 
+        }
+            return acc
+       }, {})
+       
+    const result = Object.values(results).sort((a, b) => b.globalocc - a.globalocc)
+    const final = result.map((x, index) => ({ ...x, 
+        level: x.sy.reduce((acc, b) => {
+            let min = x.sy[0].occ
+            let max = x.sy[x.sy.length - 1].occ
+            if (b.occ === min) acc.min.push(b.syName) 
+            else if (b.occ === max) acc.max.push(b.syName) 
+            return acc
+    }, { min : [], max : []}),  
+        rang: `top ${ index + 1 }`}) );
+    console.log(final.slice(0, 1)[0].level)
+    const detectFolder = 'verbes'
+    if (!fs.existsSync(`./listes/occ/${ detectFolder }`)) fs.mkdirSync(`./listes/occ/${ detectFolder }`, { recursive: true});  
+    await writeFile(`./listes/occ/${ routeName }.txt`, JSON.stringify(result)) 
+}
+
+exports.infoWord = async (word) => {
+    const dictionnaire = await loadFile('./listes/dictionnaire.txt')
+    const adverbes = await loadFile('./listes/adverbes.txt')
+    const gentiles = await loadFile('./listes/gentiles.txt')
+    const fleurs = await loadFile('./listes/fleurs.txt')
+    const verbes = await loadFile('./listes/verbes/verbes.txt')
+    const syllablesJSON = await readFile('./listes/syllables/dictionnaire.txt', 'utf-8')
+    const syllables = JSON.parse(syllablesJSON)
+
+    let message
+    if (!dictionnaire.includes(word)) {
+        message = `Le mot ${ word } n'est pas répertorié dans le dictionnaire.`;
+        return { message }
+    }
+    message = `succès`
+
+    const wordOrigin = [] 
+        if (adverbes.includes(word)) wordOrigin.push('adverbe')
+        if (fleurs.includes(word)) wordOrigin.push('fleur')
+        if (gentiles.includes(word)) wordOrigin.push('gentilé')
+        if (verbes.includes(word)) wordOrigin.push('verbe')
+    wordOrigin.length === 0 && wordOrigin.push(`Mot pas encore classé.`)
+
+    const wordInElementSize = dictionnaire.filter(x => x.includes(word)).length
+    const messageWordInElement = 
+        wordInElementSize === 1 ? 
+                `Le mot ${ word } est répertorié une seule fois comme un sous-mot dans le dictionnaire.` : 
+        wordInElementSize > 1 ? 
+                `Le mot ${ word } est répertorié ${ wordInElementSize } fois comme un sous-mot dans le dictionnaire.` :
+                ''
+
+    const wordOcc = cutter(word).reduce((acc, val) => {
+        acc.push({ val : val, occ : syllables[val] }) 
+        return acc
+    },[])
+        .sort((a, b) => a.occ - b.occ)
+    const wordExplode = wordExplodeLetters(word)
+
+    return {
+        message, 
+        occClassement : wordOcc, 
+        wordInElementSize, 
+        wordOrigin,
+        word, 
+        explodeLetters: wordExplode.size
+    }
+}
+
+exports.findWordsWithSyllable = async (routeName, syllable) => {
+    const json_dictionnaire = await readFile(`./listes/${ routeName }.txt`, 'utf-8')
+    const list = json_dictionnaire.split('\n')
+    return list.filter(word => (word.match(new RegExp(syllable, "g")) || []).length >= 2);
+}
+
+async function createUserModel(userBody, res) {
+    if (typeof userBody === "object" && Array.isArray(userBody)) {
+        res.status(400).json('Seul un objet valide peut être inséré.');
+        return;
+    } else if (typeof userBody === "object") {
+        const filepath = path.resolve(__dirname, '../auth/', 'users.json');
+        let users = await readFile(filepath, 'utf-8');
+        let userParse = users === '' ? [] : JSON.parse(users);
+        const matchUsername = userParse.filter(user => userBody.username === user.username);
+        if (!matchUsername.length)
+            userParse.push(userBody);
+        const textified = JSON.stringify(userParse);
+        fs.writeFile(filepath, textified, 'utf8', (error) => {
+            if (error)
+                throw error;
+        });
+    } else {
+        return res.status(400).json({ message: 'Problème de syntaxe.' });
+    }
+
 }
 
 exports.createUser =  (username, password, bcrypt) => {
@@ -286,5 +430,5 @@ exports.objSyllabEffect = async (list, choose, routeName) => {
         if (choose === "delete") obj[element] > 0 && obj[element]-- 
         else if (choose === "add")!obj[element] ? obj[element] = 1 : ++obj[element]
     }) 
-    await writeSyll(`./listes/syllables/${ routeName }.txt`, obj)
+    await write(`./listes/syllables/${ routeName }.txt`, obj)
 }

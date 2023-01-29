@@ -3,7 +3,7 @@ const { chooseNbExplodeletters } = require('../utilitaires/function')
 const auth = require('../auth/auth')
 
 module.exports = async (app, routeName) => {
-    app.get(`/api/${ routeName }/explode`, auth,  async (req, res) => {
+    app.get(`/api/explode/${ routeName }`, auth,  async (req, res) => {
         try {
             let limit = 20
             let destroyLetters = req.query.destroyLetters

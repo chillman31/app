@@ -1,0 +1,4 @@
+{
+  "appService.defaultWebAppToDeploy": "/subscriptions/6b8fe713-395f-44c6-bbb8-058d91e672d1/AppServices/subscriptions/6b8fe713-395f-44c6-bbb8-058d91e672d1/resourceGroups/appsvc_linux_centralus/providers/Microsoft.Web/sites/wordbg",
+  "appService.deploySubpath": "."
+}

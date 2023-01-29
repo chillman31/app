@@ -13,6 +13,7 @@ module.exports = (app, routeName) => {
                 if (taille < 1 || taille >= 100) return res.status(400).json({ message: 'La taille du mot doit être supérieure au nombre 1 et inférieure ou égale au nombre 100.'})
                 const infos = await findLengthElement(`./listes/${ routeName }.txt`, taille)
                 return res.status(200).json({ globalLength: infos.globalLength, message : infos.message, data: infos.result })
+
             } else {
                 let limit = 10
                 if (!req.query.syllabe) return res.status(400).json({ messsage: `La paramètre syllabe doit être défini dans l'url.` })
@@ -28,6 +29,7 @@ module.exports = (app, routeName) => {
                     limit = parseInt(req.query.limit)
                     if (limit < 1 || limit >= 100) return res.status(400).json({ message: 'La limite doit être supérieure au nombre 1 et inférieure ou égale au nombre 100.'})
                 }
+                
                 try {
                     const infos = await findElement(`./listes/${ routeName }.txt`, limit, req.query.syllabe.toLowerCase())
                     return res.status(200).json({ globalLength: infos.globalLength, message : infos.message, data: infos.result })
