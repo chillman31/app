@@ -287,6 +287,7 @@ exports.getocc = async (routeName, currentpage, results) => {
     const listJSON = await readFile(`./listes/occ/${ routeName }.txt`, 'utf-8')
     const list = await JSON.parse(listJSON)
     const res = list.slice(firstpage, lastpage)
+    console.log(list)
     let message = `Succès`
     if (res.length === 0) {
         message = `Aucune solution n'a été trouvée.`
@@ -331,7 +332,7 @@ exports.generateOccList = async (routeName) => {
     console.log(final.slice(0, 1)[0].level)
     const detectFolder = 'verbes'
     if (!fs.existsSync(`./listes/occ/${ detectFolder }`)) fs.mkdirSync(`./listes/occ/${ detectFolder }`, { recursive: true});  
-    await writeFile(`./listes/occ/${ routeName }.txt`, JSON.stringify(result)) 
+    await writeFile(`./listes/occ/${ routeName }.txt`, JSON.stringify(final)) 
 }
 
 exports.infoWord = async (word) => {
