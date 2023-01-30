@@ -281,9 +281,9 @@ const cutter = (list) => {
 }
 
 exports.getocc = async (routeName, currentpage, results) => {
-    const firstpage =  currentpage * results - results
-    const lastpage = results 
-    console.log(firstpage, lastpage)
+    const coeff = currentpage - 1   
+    const firstpage =  results * coeff 
+    const lastpage = firstpage + results 
     const listJSON = await readFile(`./listes/occ/${ routeName }.txt`, 'utf-8')
     const list = await JSON.parse(listJSON)
     const res = list.slice(firstpage, lastpage)

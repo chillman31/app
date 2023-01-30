@@ -15,7 +15,7 @@ module.exports = (app, routeName) => {
                     if (req.query.soluce < 1) return res.status(400).json({ message: 'La valeur du paramètre soluce doit être supérieure au nombre 1 et inférieure ou égale au nombre 100.'})
                     solutions = parseInt(req.query.soluce)
                 }
-                if (page < 1 || page >= 100) return res.status(400).json({ message: 'La valeur du paramètre page doit être supérieure au nombre 1 et inférieure ou égale au nombre 100.'})
+                if (page < 1) return res.status(400).json({ message: 'La valeur du paramètre page doit être supérieure au nombre 1.'})
                 const infos = await getocc(routeName, page, solutions)
                 return res.status(200).json({ data: infos.data, message: infos.message })
             }
